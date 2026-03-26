@@ -317,10 +317,12 @@ print("\nЭкспорт в ONNX...")
 model.eval()
 dummy_input = torch.randn(1, 3, 32, 32).to(device)
 
+ONNX_FILENAME = 'cifar100_CNN_RESNET20.onnx'
+
 torch.onnx.export(
     model,
     dummy_input,
-    "cifar100.onnx",
+    ONNX_FILENAME,
     export_params=True,
     opset_version=11,
     do_constant_folding=True,
@@ -332,18 +334,19 @@ torch.onnx.export(
     }
 )
 
-print("✓ Модель экспортирована: cifar100.onnx")
+print(f"✓ Модель экспортирована: {ONNX_FILENAME}")
 
-# Копирование в папку Django
+# Копирование в папку media Django
 import shutil
-django_model_path = 'web-site-dl/media/models/cifar100.onnx'
-shutil.copy('cifar100.onnx', django_model_path)
+django_model_path = os.path.join('media', ONNX_FILENAME)
+os.makedirs('media', exist_ok=True)
+shutil.copy(ONNX_FILENAME, django_model_path)
 print(f"✓ Модель скопирована: {django_model_path}")
 
 print("\n" + "="*60)
 print("ГОТОВО!")
 print("="*60)
 print("\nСледующие шаги:")
-print("1. Перезапустите Django: docker-compose restart web")
+print("1. Перезапустите Django: python manage.py runserver")
 print("2. Откройте http://localhost:8000")
 print("3. Загрузите изображение для классификации")
