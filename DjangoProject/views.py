@@ -1,8 +1,10 @@
 from django.shortcuts import render
 from django.core.files.storage import FileSystemStorage
+from django.conf import settings
 import onnxruntime
 import numpy as np
 from PIL import Image
+import os
 
 imageClassList = {'0': 'Пингвин', '1': 'Тупик', '2': 'Абальтрос'}  #Сюда указать классы
 
@@ -22,7 +24,8 @@ def predictImage(request):
 def predictImageData(modelName, filePath):
     img = Image.open(filePath).convert("RGB")
     img = np.asarray(img.resize((32, 32), Image.ANTIALIAS))
-    sess = onnxruntime.InferenceSession(r'C:\DZ1\media\models\cifar100.onnx') #<-Здесь требуется указать свой путь к модели
+    model_path = os.path.join(settings.MEDIA_ROOT, 'cifar100_CNN_RESNET20.onnx')
+    sess = onnxruntime.InferenceSession(model_path)
     outputOFModel = np.argmax(sess.run(None, {'input': np.asarray([img]).astype(np.float32)}))
     score = imageClassList[str(outputOFModel)]
     return score
