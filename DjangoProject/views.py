@@ -18,10 +18,10 @@ def predictImage(request):
     try:
         fileObj = request.FILES['filePath']
         fs = FileSystemStorage()
-        filePathName = fs.save('images/' + fileObj.name, fileObj)
-        filePathName = fs.url(filePathName)
+        savedName = fs.save('images/' + fileObj.name, fileObj)
+        filePath = fs.path(savedName)  # реальный путь на диске, без URL-encoding
         modelName = request.POST.get('modelName')
-        scorePrediction = predictImageData(modelName, '.' + filePathName)
+        scorePrediction = predictImageData(modelName, filePath)
         return JsonResponse({'prediction': scorePrediction})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
