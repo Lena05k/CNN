@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Изображение через CNN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg-main: #02030a;
+      --bg-card: rgba(8, 10, 25, 0.9);
+      --accent: #5b8cff;          /* электрический синий */
+      --accent-alt: #a855ff;      /* неоновый фиолетовый */
+      --accent-cyan: #22e4ff;     /* бирюзовый */
+      --text-main: #f5f5f7;
+      --text-muted: #9ca3af;
+      --border-subtle: rgba(148, 163, 184, 0.25);
+      --radius-xl: 24px;
+      --radius-lg: 16px;
+      --shadow-soft: 0 40px 120px rgba(0, 0, 0, 0.85);
+      --transition-fast: 220ms ease-out;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Inter", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(90, 76, 255, 0.14) 0, transparent 40%),
+        radial-gradient(circle at 90% 0%, rgba(168, 85, 247, 0.18) 0, transparent 45%),
+        radial-gradient(circle at 0% 80%, rgba(34, 228, 255, 0.14) 0, transparent 40%),
+        radial-gradient(circle at 100% 80%, rgba(56, 189, 248, 0.12) 0, transparent 45%),
+        radial-gradient(circle at 50% 50%, #02030a 0, #020617 55%, #01010a 100%);
+      color: var(--text-main);
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 32px 16px;
+      overflow-x: hidden;
+    }
+
+    .noise-layer {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      opacity: 0.07;
+      mix-blend-mode: soft-light;
+      background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.35) 1px, transparent 0);
+      background-size: 3px 3px;
+      z-index: -1;
+    }
+
+    .orb {
+      position: fixed;
+      width: 420px;
+      height: 420px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(91, 140, 255, 0.9), transparent 60%);
+      filter: blur(20px);
+      opacity: 0.16;
+      top: -120px;
+      left: -80px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .orb.orb-2 {
+      top: auto;
+      bottom: -160px;
+      left: auto;
+      right: -60px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.9), transparent 60%);
+    }
+
+    .page {
+      width: 100%;
+      max-width: 1120px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 32px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 24px 16px 40px;
+      }
+      .page {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, rgba(91, 140, 255, 0.08), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.09), transparent 55%),
+        var(--bg-card);
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      box-shadow: var(--shadow-soft);
+      padding: 28px 28px 24px;
+      backdrop-filter: blur(26px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      border: 1px solid transparent;
+      background: linear-gradient(
+          135deg,
+          rgba(91, 140, 255, 0.45),
+          rgba(168, 85, 247, 0.0),
+          rgba(34, 228, 255, 0.4)
+        )
+        border-box;
+      -webkit-mask:
+        linear-gradient(#000, #000) padding-box,
+        linear-gradient(#000, #000);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .card + .card {
+      margin-top: 8px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .label-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 0 0, rgba(34, 228, 255, 0.25), transparent 60%),
+        rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .label-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: radial-gradient(circle, var(--accent-cyan), transparent 60%);
+      box-shadow: 0 0 9px rgba(34, 228, 255, 0.9);
+    }
+
+    h1 {
+      font-size: clamp(32px, 3.1vw, 40px);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 460px;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .hero-meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    .hero-meta-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: radial-gradient(circle, #22c55e, transparent 60%);
+      box-shadow: 0 0 8px rgba(22, 163, 74, 0.95);
+    }
+
+    .hero-meta-badge {
+      border-radius: 999px;
+      padding: 6px 11px;
+      border: 1px solid rgba(37, 99, 235, 0.7);
+      background: radial-gradient(circle at 0 0, rgba(59, 130, 246, 0.55), transparent 45%),
+        rgba(15, 23, 42, 0.9);
+      color: #dbeafe;
+    }
+
+    .upload-area {
+      border-radius: var(--radius-lg);
+      border: 1px dashed rgba(148, 163, 184, 0.65);
+      background:
+        radial-gradient(circle at top, rgba(15, 23, 42, 0.9), transparent 70%),
+        rgba(15, 23, 42, 0.85);
+      padding: 22px 18px;
+      display: grid;
+      gap: 10px;
+      cursor: pointer;
+      transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-area::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(91, 140, 255, 0.15), transparent 65%);
+      opacity: 0;
+      transition: opacity var(--transition-fast);
+      pointer-events: none;
+    }
+
+    .upload-area:hover {
+      border-color: rgba(129, 140, 248, 0.9);
+      transform: translateY(-2px);
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.9);
+    }
+
+    .upload-area:hover::before {
+      opacity: 1;
+    }
+
+    .upload-title {
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .upload-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .upload-hint {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .upload-input {
+      display: none;
+    }
+
+    .upload-pill-row {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 6px;
+    }
+
+    .upload-pill {
+      border-radius: 999px;
+      padding: 4px 9px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      font-size: 11px;
+      color: #e5e7eb;
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .cta-row {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-primary {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 20px;
+      border-radius: 999px;
+      border: 0;
+      cursor: pointer;
+      background-image: linear-gradient(135deg, var(--accent), var(--accent-alt));
+      color: #f9fafb;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      box-shadow:
+        0 0 20px rgba(91, 140, 255, 0.55),
+        0 0 34px rgba(168, 85, 247, 0.65);
+      transition: transform 160ms ease-out, box-shadow 160ms ease-out, filter 160ms ease-out;
+      white-space: nowrap;
+    }
+
+    .btn-primary::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      border: 1px solid rgba(248, 250, 252, 0.26);
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px) scale(1.01);
+      filter: brightness(1.05);
+      box-shadow:
+        0 0 26px rgba(91, 140, 255, 0.85),
+        0 0 40px rgba(168, 85, 247, 0.9);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0) scale(0.99);
+      box-shadow:
+        0 0 16px rgba(91, 140, 255, 0.65),
+        0 0 26px rgba(168, 85, 247, 0.75);
+    }
+
+    .btn-text {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .btn-text span {
+      color: #e5e7eb;
+    }
+
+    .result-card {
+      display: grid;
+      grid-template-rows: auto auto;
+      gap: 16px;
+    }
+
+    .result-title {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .result-body {
+      padding: 12px 14px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      background:
+        radial-gradient(circle at top, rgba(15, 23, 42, 0.9), transparent 70%),
+        rgba(15, 23, 42, 0.92);
+      min-height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      font-size: 15px;
+      letter-spacing: 0.02em;
+      color: #e5e7eb;
+    }
+
+    .result-placeholder {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .status-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .status-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: radial-gradient(circle, #22c55e, transparent 60%);
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.95);
+    }
+
+    .status-value {
+      color: #bbf7d0;
+      font-weight: 500;
+    }
+
+    .status-hint {
+      text-align: right;
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    @media (max-width: 900px) {
+      .card {
+        padding: 22px 20px 18px;
+      }
+
+      .hero-meta {
+        margin-top: 16px;
+      }
+
+      .result-body {
+        min-height: 72px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise-layer"></div>
+  <div class="orb"></div>
+  <div class="orb orb-2"></div>
+
+  <main class="page">
+    <!-- Левая колонка: Hero + загрузка -->
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <div class="label-pill">
+            <span class="label-dot"></span>
+            <span>CNN · image score</span>
+          </div>
+          <h1>Изображение через&nbsp;CNN</h1>
+          <p class="subtitle">
+            Загрузи изображение и посмотри, как модель его интерпретирует.
+            Страница оптимизирована под тёмную космическую тему и реал‑тайм анализ.
+          </p>
+        </div>
+      </div>
+
+      <div class="hero-meta">
+        <div class="hero-meta-item hero-meta-badge">
+          Точность модели · 2025+
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-dot"></span>
+          Реальный GPU
+        </div>
+        <div class="hero-meta-item">
+          <span class="hero-meta-dot" style="background:radial-gradient(circle,#38bdf8,transparent 60%); box-shadow:0 0 8px rgba(56,189,248,0.95);"></span>
+          Поддержка JPG · PNG
+        </div>
+      </div>
+
+      <label class="upload-area">
+        <div>
+          <div class="upload-title">Перетащи изображение или кликни для загрузки</div>
+          <div class="upload-subtitle">
+            Поддерживаются стандартные форматы (JPG, PNG, BMP); файл сразу уйдёт в модель CNN для анализа.
+          </div>
+          <div class="upload-pill-row">
+            <span class="upload-pill">Up to 10MB</span>
+            <span class="upload-pill">Single image</span>
+          </div>
+          <div class="upload-hint">Файл не сохраняется, используется только для вычисления score.</div>
+        </div>
+        <input
+          class="upload-input"
+          type="file"
+          name="image"
+          accept="image/*"
+        />
+      </label>
+
+      <div class="cta-row">
+        <button type="submit" class="btn-primary">
+          <span>Анализировать изображение</span>
+        </button>
+        <div class="btn-text">
+          или <span>загрузи другое</span>, если хочешь обновить результат.
+        </div>
+      </div>
+    </section>
+
+    <!-- Правая колонка: результат + состояние -->
+    <section class="card result-card">
+      <div>
+        <div class="label-pill">
+          <span class="label-dot"></span>
+          <span>Model output</span>
+        </div>
+        <div class="result-title">Результат</div>
+        <div class="result-body">
+          {% if scorePrediction %}
+            {{ scorePrediction }}
+          {% else %}
+            <span class="result-placeholder">Ожидание... Загрузите изображение и запустите анализ.</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div>
+        <div class="result-title" style="margin-bottom:4px;">Состояние</div>
+        <div class="status-wrap">
+          <div class="status-label">
+            <span class="status-dot"></span>
+            <span>GPU активен</span>
+          </div>
+          <div class="status-hint">
+            Инференс выполняется на GPU, что уменьшает время ответа модели и повышает стабильность работы.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
