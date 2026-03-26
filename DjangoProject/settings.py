@@ -58,7 +58,7 @@ MEDIA_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [BASE_DIR / 'frontend'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
