@@ -1,7 +1,7 @@
 <template>
   <div class="bg-hero min-h-screen flex flex-col">
     <!-- dark overlay for readability -->
-    <div class="min-h-screen flex flex-col bg-black/40">
+    <div class="min-h-screen flex flex-col bg-black/10">
       <AppNav />
       <main class="flex-1 flex flex-col items-center justify-center pt-20 pb-8">
         <HeroSection />

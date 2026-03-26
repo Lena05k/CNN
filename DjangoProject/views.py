@@ -6,10 +6,10 @@ import numpy as np
 from PIL import Image
 import os
 
-imageClassList = {'0': 'Пингвин', '1': 'Тупик', '2': 'Абальтрос'}  #Сюда указать классы
+imageClassList = {'0': 'Пингвин', '1': 'Тупик', '2': 'Альбатрос'}  #Сюда указать классы
 
 def scoreImagePage(request):
-    return render(request, 'App.vue')
+    return render(request, 'index.html')
 
 def predictImage(request):
     fileObj = request.FILES['filePath']
@@ -19,7 +19,7 @@ def predictImage(request):
     modelName = request.POST.get('modelName')
     scorePrediction = predictImageData(modelName, '.'+filePathName)
     context = {'scorePrediction': scorePrediction}
-    return render(request, 'scorepage.html', context)
+    return render(request, 'index.html', context)
 
 def predictImageData(modelName, filePath):
     img = Image.open(filePath).convert("RGB")
