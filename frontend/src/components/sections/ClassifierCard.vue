@@ -51,11 +51,11 @@
 
 <script setup>
 import { ref } from 'vue'
-import DropZone        from '@/components/ui/DropZone.vue'
-import FileChip        from '@/components/ui/FileChip.vue'
-import BaseButton      from '@/components/ui/BaseButton.vue'
+import axios from 'axios'
+import DropZone         from '@/components/ui/DropZone.vue'
+import FileChip         from '@/components/ui/FileChip.vue'
+import BaseButton       from '@/components/ui/BaseButton.vue'
 import PredictionResult from '@/components/ui/PredictionResult.vue'
-import { predictImage } from '@/api/classifier'
 
 const props = defineProps({
   scorePrediction: { type: String, default: null },
@@ -68,6 +68,15 @@ const fileName     = ref('')
 const isDragging   = ref(false)
 const loading      = ref(false)
 const error        = ref(null)
+
+function getCsrfToken() {
+  const name = 'csrftoken'
+  for (const cookie of document.cookie.split(';')) {
+    const [key, value] = cookie.trim().split('=')
+    if (key === name) return decodeURIComponent(value)
+  }
+  return null
+}
 
 function applyFile(file) {
   if (!file?.type.startsWith('image/')) return
@@ -90,11 +99,24 @@ async function handleSubmit() {
   if (!selectedFile.value || loading.value) return
   loading.value = true
   error.value   = null
+
   try {
-    const result = await predictImage(selectedFile.value)
-    emit('prediction', result)
+    const formData = new FormData()
+    formData.append('filePath', selectedFile.value)
+
+    const csrfToken = getCsrfToken()
+    if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken)
+
+    const response = await axios.post('/predictImage', formData, {
+      headers: { 'X-CSRFToken': csrfToken ?? '' },
+    })
+
+    emit('prediction', response.data.prediction)
   } catch (e) {
-    error.value = 'Ошибка при классификации. Проверьте соединение.'
+    const serverError = e.response?.data?.error
+    error.value = serverError
+      ? `Ошибка сервера: ${serverError}`
+      : 'Ошибка при классификации. Проверьте соединение.'
   } finally {
     loading.value = false
   }
