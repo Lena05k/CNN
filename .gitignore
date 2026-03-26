@@ -25,3 +25,5 @@ dist-ssr
 
 /.venv
 /.idea
+/chrome-mac-arm64
+/chromedriver-mac-arm64
