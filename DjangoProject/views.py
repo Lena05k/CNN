@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.core.files.storage import FileSystemStorage
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 import onnxruntime
 import numpy as np
@@ -12,6 +13,7 @@ imageClassList = {'0': 'Пингвин', '1': 'Тупик', '2': 'Альбатр
 def scoreImagePage(request):
     return render(request, 'index.html')
 
+@csrf_exempt
 def predictImage(request):
     try:
         fileObj = request.FILES['filePath']
