@@ -19,7 +19,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/predictImage': 'http://localhost:8001',
+      '/predictImage': {
+        target: 'http://cnn-backend:8000',
+        changeOrigin: true,
+      },
     },
   },
 })

@@ -18,15 +18,12 @@ export async function predictImage(file) {
   const response = await axios.post('/predictImage', formData, {
     headers: {
       'X-CSRFToken': csrfToken ?? '',
+      'Content-Type': 'multipart/form-data',
     },
   })
 
-  // Django returns HTML — parse prediction from it
-  const html = response.data
-  const match = html.match(/The classification is\s*:\s*([^<]+)</)
-  if (match) return match[1].trim()
-
-  throw new Error('Could not parse prediction from response')
+  // Django returns JSON with prediction
+  return response.data.prediction
 }
 
 function getCsrfToken() {

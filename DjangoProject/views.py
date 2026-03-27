@@ -29,7 +29,7 @@ def predictImage(request):
 def predictImageData(modelName, filePath):
     img = Image.open(filePath).convert("RGB")
     img = np.asarray(img.resize((32, 32), Image.LANCZOS))
-    model_path = os.path.join(settings.MEDIA_ROOT, 'cifar100_CNN_RESNET20.onnx')
+    model_path = os.path.join(settings.MEDIA_ROOT, 'models', 'cifar100_CNN_RESNET20.onnx')
     sess = onnxruntime.InferenceSession(model_path)
     outputOFModel = np.argmax(sess.run(None, {'input': np.asarray([img]).astype(np.float32)}))
     score = imageClassList[str(outputOFModel)]
