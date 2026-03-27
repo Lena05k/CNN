@@ -23,6 +23,23 @@ dist-ssr
 *.sln
 *.sw?
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+*.egg-info/
+.eggs/
+db.sqlite3
+
+# Docker
+.dockerignore
+*.egg
+
+# Project specific
 /.venv
 /.idea
 media/images/

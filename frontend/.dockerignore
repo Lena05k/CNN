@@ -1,0 +1,16 @@
+node_modules/
+dist/
+npm-debug.log
+.env
+.env.local
+*.log
+.DS_Store
+*.local
+coverage/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cache/
+vite.config.js.timestamp-*

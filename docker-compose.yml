@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: cnn-backend
+    volumes:
+      - ./media:/app/media
+    ports:
+      - "8001:8000"
+    environment:
+      - DEBUG=1
+      - DJANGO_SETTINGS_MODULE=DjangoProject.settings
+    restart: unless-stopped
+    networks:
+      - cnn-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../frontend/Dockerfile.frontend
+    container_name: cnn-frontend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.js:/app/vite.config.js
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/package.json:/app/package.json
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - cnn-network
+
+networks:
+  cnn-network:
+    driver: bridge

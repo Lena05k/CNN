@@ -1,0 +1,21 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Копирование package файлов
+COPY package*.json ./
+
+# Установка зависимостей
+RUN npm ci
+
+# Копирование исходного кода frontend
+COPY . ./
+
+# Переменные окружения для Vite
+ENV HOST=0.0.0.0 \
+    PORT=5173
+
+EXPOSE 5173
+
+# Запуск Vite dev server
+CMD ["npm", "run", "dev"]

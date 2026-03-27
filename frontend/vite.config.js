@@ -19,7 +19,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/predictImage': 'http://localhost:8000',
+      '/predictImage': 'http://localhost:8001',
     },
   },
 })
