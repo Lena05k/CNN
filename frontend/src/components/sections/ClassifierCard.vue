@@ -1,6 +1,6 @@
 <template>
   <section class="px-4 flex justify-center animate-fade-up" style="animation-delay: 0.1s">
-    <div class="glass-card w-full max-w-md p-6 sm:p-8">
+    <div class="glass-card w-full max-w-xl p-6 sm:p-8">
 
       <!-- Drop Zone -->
       <DropZone
@@ -35,6 +35,9 @@
         <PredictionResult
           v-if="scorePrediction"
           :label="scorePrediction"
+          :weight="birdMeta.weight"
+          :description="birdMeta.description"
+          :weights-summary="weightsSummary"
           class="mt-5"
         />
       </Transition>
@@ -50,17 +53,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import axios from 'axios'
 import DropZone         from '@/components/ui/DropZone.vue'
 import FileChip         from '@/components/ui/FileChip.vue'
 import BaseButton       from '@/components/ui/BaseButton.vue'
 import PredictionResult from '@/components/ui/PredictionResult.vue'
+import { getBirdMeta }  from '@/constants/birdMeta.js'
 
 const props = defineProps({
   scorePrediction: { type: String, default: null },
 })
 const emit = defineEmits(['prediction'])
+
+const birdMeta     = computed(() => getBirdMeta(props.scorePrediction))
+const weightsSummary = ref(null)
 
 const selectedFile = ref(null)
 const previewUrl   = ref(null)
@@ -80,18 +87,20 @@ function getCsrfToken() {
 
 function applyFile(file) {
   if (!file?.type.startsWith('image/')) return
-  selectedFile.value = file
-  fileName.value     = file.name
-  previewUrl.value   = URL.createObjectURL(file)
-  error.value        = null
+  selectedFile.value   = file
+  fileName.value       = file.name
+  previewUrl.value     = URL.createObjectURL(file)
+  error.value          = null
+  weightsSummary.value = null
   emit('prediction', null)
 }
 
 function clearFile() {
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
-  selectedFile.value = null
-  previewUrl.value   = null
-  fileName.value     = ''
+  selectedFile.value   = null
+  previewUrl.value     = null
+  fileName.value       = ''
+  weightsSummary.value = null
   emit('prediction', null)
 }
 
@@ -111,6 +120,7 @@ async function handleSubmit() {
       headers: { 'X-CSRFToken': csrfToken ?? '' },
     })
 
+    weightsSummary.value = response.data.weightsSummary ?? null
     emit('prediction', response.data.prediction)
   } catch (e) {
     const serverError = e.response?.data?.error

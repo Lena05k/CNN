@@ -6,8 +6,8 @@
       <main class="flex-1 flex flex-col items-center justify-center pt-20 pb-8">
         <HeroSection />
         <ClassifierCard
-          :score-prediction="scorePrediction"
-          @prediction="onPrediction"
+            :score-prediction="scorePrediction"
+            @prediction="onPrediction"
         />
         <FeaturesRow />
       </main>
