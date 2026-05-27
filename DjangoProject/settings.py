@@ -20,13 +20,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-4u50#0mg0q5$q0erxoy@kehx#3k(!(xj@ug$0!^@+q%h!bc3gj'
+# В продакшне SECRET_KEY берётся из переменной окружения Railway
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-4u50#0mg0q5$q0erxoy@kehx#3k(!(xj@ug$0!^@+q%h!bc3gj',
+)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'cnn-backend', '0.0.0.0']
+_raw_hosts = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,cnn-backend,0.0.0.0')
+ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',')]
+# Railway добавляет домен через переменную RAILWAY_PUBLIC_DOMAIN
+_railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+if _railway_domain:
+    ALLOWED_HOSTS.append(_railway_domain)
 
 
 # Application definition
@@ -42,6 +49,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # раздача Vue-сборки
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -59,7 +67,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'frontend'],
+        # dev: frontend/index.html  |  prod: templates/dist/index.html
+        'DIRS': [BASE_DIR / 'templates' / 'dist', BASE_DIR / 'frontend'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -120,7 +129,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# WhiteNoise раздаёт собранный Vue (assets/, index.html) с корня /
+WHITENOISE_ROOT = BASE_DIR / 'templates' / 'dist'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
