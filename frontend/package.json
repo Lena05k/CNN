@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "vue": "^3.4.0",
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "onnxruntime-web": "^1.18.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

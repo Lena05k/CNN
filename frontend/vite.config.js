@@ -4,6 +4,9 @@ import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [vue()],
+  optimizeDeps: {
+    exclude: ['onnxruntime-web'],
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -19,10 +22,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/predictImage': {
-        target: 'http://cnn-backend:8000',
-        changeOrigin: true,
-      },
+      '/predictImage': { target: 'http://cnn-backend:8000', changeOrigin: true },
+      '/api':          { target: 'http://cnn-backend:8000', changeOrigin: true },
+      '/media':        { target: 'http://cnn-backend:8000', changeOrigin: true },
     },
   },
 })

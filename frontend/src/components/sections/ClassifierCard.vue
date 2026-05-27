@@ -1,53 +1,80 @@
 <template>
-  <section class="px-4 flex justify-center animate-fade-up" style="animation-delay: 0.1s">
-    <div class="glass-card w-full max-w-xl p-6 sm:p-8">
+  <section class="px-4 flex justify-center w-full animate-fade-up" style="animation-delay: 0.1s">
+    <div
+      class="glass-card w-full p-6 sm:p-8 transition-all duration-300"
+      :class="scorePrediction ? 'max-w-2xl' : 'max-w-md'"
+    >
 
-      <!-- Drop Zone -->
-      <DropZone
-        :preview-url="previewUrl"
-        :file-name="fileName"
-        :is-dragging="isDragging"
-        @file-selected="applyFile"
-        @drag-enter="isDragging = true"
-        @drag-leave="isDragging = false"
-      />
+      <!-- Загрузка — только пока нет результата -->
+      <template v-if="!scorePrediction">
+        <DropZone
+          :preview-url="previewUrl"
+          :file-name="fileName"
+          :is-dragging="isDragging"
+          @file-selected="applyFile"
+          @drag-enter="isDragging = true"
+          @drag-leave="isDragging = false"
+        />
+        <FileChip
+          v-if="fileName"
+          :file-name="fileName"
+          class="mt-4"
+          @clear="clearFile"
+        />
+      </template>
 
-      <!-- File chip -->
-      <FileChip
-        v-if="fileName"
-        :file-name="fileName"
-        class="mt-4"
-        @clear="clearFile"
-      />
+      <!-- Когда есть результат — компактная строка с файлом -->
+      <template v-else>
+        <FileChip
+          :file-name="fileName"
+          class="mb-4"
+          @clear="clearFile"
+        />
+      </template>
 
-      <!-- Submit -->
+      <!-- Кнопка -->
       <BaseButton
         :disabled="!selectedFile || loading"
         :loading="loading"
-        class="w-full mt-6"
+        class="w-full mt-5"
         @click="handleSubmit"
       >
         {{ loading ? 'Анализирую...' : 'Классифицировать' }}
       </BaseButton>
 
-      <!-- Result -->
-      <Transition name="slide-up">
-        <PredictionResult
-          v-if="scorePrediction"
-          :label="scorePrediction"
-          :weight="birdMeta.weight"
-          :description="birdMeta.description"
-          :weights-summary="weightsSummary"
-          class="mt-5"
-        />
-      </Transition>
-
-      <!-- Error -->
+      <!-- Ошибка -->
       <Transition name="slide-up">
         <p v-if="error" class="mt-4 text-red-300 text-sm text-center">
           {{ error }}
         </p>
       </Transition>
+
+      <!-- Результат: две колонки — слева текст, справа изображение -->
+      <Transition name="slide-up">
+        <div
+          v-if="scorePrediction"
+          class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-5 items-start"
+        >
+          <!-- Левая колонка: результат классификации -->
+          <PredictionResult
+            :label="scorePrediction"
+            :emoji="birdMeta.emoji"
+            :latin="birdMeta.latin"
+            :weight="birdMeta.weight"
+            :description="birdMeta.description"
+            :weights-summary="weightsSummary"
+          />
+
+          <!-- Правая колонка: загруженное изображение -->
+          <img
+            v-if="previewUrl"
+            :src="previewUrl"
+            class="w-full rounded-2xl object-cover"
+            alt="Загруженное изображение"
+          />
+        </div>
+      </Transition>
+
     </div>
   </section>
 </template>
@@ -66,7 +93,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['prediction'])
 
-const birdMeta     = computed(() => getBirdMeta(props.scorePrediction))
+const birdMeta       = computed(() => getBirdMeta(props.scorePrediction))
 const weightsSummary = ref(null)
 
 const selectedFile = ref(null)

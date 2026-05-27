@@ -126,3 +126,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ── ДЗ 2: путь к лучшей ONNX-модели сегментации ──────────────────────────────
+SEG_MODEL_PATH = BASE_DIR / 'yolo8_segment' / 'yolov8n-seg-sgd-e20' / 'weights' / 'best.onnx'

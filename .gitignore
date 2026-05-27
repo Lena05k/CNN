@@ -43,3 +43,7 @@ db.sqlite3
 /.venv
 /.idea
 media/images/
+
+# AI assistant config
+CLAUDE.md
+CLAUDE_RU.md
