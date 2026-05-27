@@ -28,12 +28,8 @@ SECRET_KEY = os.environ.get(
 
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-_raw_hosts = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,cnn-backend,0.0.0.0')
-ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',')]
-# Railway добавляет домен через переменную RAILWAY_PUBLIC_DOMAIN
-_railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
-if _railway_domain:
-    ALLOWED_HOSTS.append(_railway_domain)
+# В продакшне разрешаем все хосты — домен Railway известен заранее
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
