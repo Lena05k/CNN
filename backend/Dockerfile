@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# CLIP-модель из локального кеша (без скачивания с интернета)
+COPY hf_cache/ /root/.cache/huggingface/hub/
+
 # Копирование кода Django
 COPY manage.py .
 COPY DjangoProject/ ./DjangoProject/

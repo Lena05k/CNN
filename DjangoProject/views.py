@@ -214,6 +214,8 @@ def clip_card_search(request):
                 img_inputs = proc(images=pil_crop, return_tensors='pt')
                 with torch.no_grad():
                     img_feat = model.get_image_features(**img_inputs)
+                    if hasattr(img_feat, 'pooler_output'):
+                        img_feat = img_feat.pooler_output
                     img_feat = img_feat / img_feat.norm(dim=-1, keepdim=True)
                 img_emb = img_feat[0].cpu().numpy()
 
@@ -222,6 +224,8 @@ def clip_card_search(request):
                 txt_inputs = proc(text=texts, return_tensors='pt', padding=True, truncation=True)
                 with torch.no_grad():
                     txt_feat = model.get_text_features(**txt_inputs)
+                    if hasattr(txt_feat, 'pooler_output'):
+                        txt_feat = txt_feat.pooler_output
                     txt_feat = txt_feat / txt_feat.norm(dim=-1, keepdim=True)
                 txt_embs = txt_feat.cpu().numpy()
 
@@ -291,5 +295,11 @@ def _preload_models():
         print('[WARMUP] segmentation model ready.')
     except Exception as e:
         print(f'[WARMUP] segmentation model failed: {e}')
+    try:
+        from .clip_search import _load_clip
+        _load_clip()
+        print('[WARMUP] CLIP ready.')
+    except Exception as e:
+        print(f'[WARMUP] CLIP failed: {e}')
 
 _threading.Thread(target=_preload_models, daemon=True).start()

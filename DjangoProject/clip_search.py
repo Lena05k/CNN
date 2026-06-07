@@ -49,6 +49,8 @@ def _embed(pil_img: Image.Image) -> np.ndarray:
     inputs = proc(images=pil_img, return_tensors='pt')
     with torch.no_grad():
         feat = model.get_image_features(**inputs)
+        if hasattr(feat, 'pooler_output'):
+            feat = feat.pooler_output
         feat = feat / feat.norm(dim=-1, keepdim=True)
     return feat[0].cpu().numpy()
 
@@ -117,6 +119,8 @@ def find_similar_by_text(query: str, media_root: str, top_k: int = 5) -> list:
     inputs = proc(text=[query], return_tensors='pt', padding=True, truncation=True)
     with torch.no_grad():
         feat = model.get_text_features(**inputs)
+        if hasattr(feat, 'pooler_output'):
+            feat = feat.pooler_output
         feat = feat / feat.norm(dim=-1, keepdim=True)
     text_emb = feat[0].cpu().numpy()
 
