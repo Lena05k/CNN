@@ -28,9 +28,16 @@
         </div>
 
         <BaseButton :disabled="!selectedFile || loading" :loading="loading" class="w-full mt-5" @click="handleSubmit">
-          <span v-if="loading">{{ loadingMsg }}</span>
+          <span v-if="loading">{{ loadingMsg }} {{ loadingProgress }}%</span>
           <span v-else>Сегментировать</span>
         </BaseButton>
+
+        <div v-if="loading" class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+          <div
+            class="h-full bg-white/70 rounded-full transition-all duration-300 ease-out"
+            :style="{ width: loadingProgress + '%' }"
+          />
+        </div>
 
         <Transition name="slide-up">
           <p v-if="error" class="mt-4 text-red-300 text-sm text-center whitespace-pre-line">{{ error }}</p>
@@ -51,10 +58,18 @@
               class="flex-1 h-1 accent-white cursor-pointer"
             />
           </div>
-          <BaseButton :disabled="loading" :loading="loading" class="shrink-0" @click="handleSubmit">
-            <span v-if="loading">{{ loadingMsg }}</span>
-            <span v-else>Повторить</span>
-          </BaseButton>
+          <div class="flex flex-col items-stretch gap-1 shrink-0 min-w-[120px]">
+            <BaseButton :disabled="loading" :loading="loading" @click="handleSubmit">
+              <span v-if="loading">{{ loadingMsg }} {{ loadingProgress }}%</span>
+              <span v-else>Повторить</span>
+            </BaseButton>
+            <div v-if="loading" class="h-1 bg-white/10 rounded-full overflow-hidden">
+              <div
+                class="h-full bg-white/70 rounded-full transition-all duration-300 ease-out"
+                :style="{ width: loadingProgress + '%' }"
+              />
+            </div>
+          </div>
         </div>
 
         <Transition name="slide-up">
@@ -138,7 +153,7 @@
                     :key="card.id"
                     class="rounded-xl border border-white/20 bg-black/40 p-3 space-y-2"
                   >
-                    <!-- Шапка: номер + процент схожести -->
+                    <!-- Шапка: цвет + процент схожести CLIP -->
                     <div class="flex items-center justify-between">
                       <span
                         class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
@@ -146,15 +161,12 @@
                       >{{ card.id }}</span>
 
                       <div class="flex flex-col items-end gap-0.5">
-                        <span class="text-sm font-mono font-bold text-white">
-                          {{ card.similarity != null
-                              ? (card.similarity * 100).toFixed(1) + '%'
-                              : '~' + card.defaultSimilarity + '%' }}
+                        <span v-if="card.similarity != null" class="text-sm font-mono font-bold text-white">
+                          {{ (card.similarity * 100).toFixed(1) }}%
                         </span>
-                        <span class="text-[9px] uppercase tracking-wide"
-                              :class="card.similarity != null ? 'text-emerald-300' : 'text-white/55'">
-                          {{ card.similarity != null ? 'CLIP' : 'типовой' }}
-                        </span>
+                        <span v-else class="text-white/40 text-sm">—</span>
+                        <span v-if="card.similarity != null"
+                              class="text-[9px] uppercase tracking-wide text-emerald-300">CLIP</span>
                       </div>
                     </div>
 
@@ -211,30 +223,42 @@ import DropZone   from '@/components/ui/DropZone.vue'
 import FileChip   from '@/components/ui/FileChip.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { CLASS_NAMES, CLASS_COLORS, CLASS_INFO } from '@/constants/segmentMeta.js'
-import { BIRD_CARDS, getCardsByClass }            from '@/constants/birdCards.js'
-
-/** Добавляет defaultSimilarity из локального справочника к карточкам с API */
-function enrichCards(cards) {
-  return cards.map(card => ({
-    ...card,
-    defaultSimilarity: BIRD_CARDS.find(c => c.id === card.id)?.defaultSimilarity ?? 80,
-  }))
-}
+import { getCardsByClass }                        from '@/constants/birdCards.js'
 
 // ── State ──────────────────────────────────────────────────────────────────────
 const confThreshPct = ref(25)
 const confThresh    = computed(() => confThreshPct.value / 100)
 
-const selectedFile = ref(null)
-const previewUrl   = ref(null)
-const fileName     = ref('')
-const isDragging   = ref(false)
-const loading      = ref(false)
-const loadingMsg   = ref('Сегментирую...')
-const error        = ref(null)
-const detections   = ref([])
-const renderedImg  = ref(null)
-const modelName    = ref('')
+const selectedFile    = ref(null)
+const previewUrl      = ref(null)
+const fileName        = ref('')
+const isDragging      = ref(false)
+const loading         = ref(false)
+const loadingMsg      = ref('Сегментирую...')
+const loadingProgress = ref(0)
+const error           = ref(null)
+const detections      = ref([])
+const renderedImg     = ref(null)
+const modelName       = ref('')
+
+let _progressTimer = null
+
+function _startProgress() {
+  loadingProgress.value = 0
+  clearInterval(_progressTimer)
+  _progressTimer = setInterval(() => {
+    const p = loadingProgress.value
+    // Fast 0→30, medium 30→70, crawl 70→90
+    const step = p < 30 ? 4 : p < 70 ? 1.5 : 0.4
+    if (p < 90) loadingProgress.value = Math.min(90, p + step)
+  }, 250)
+}
+
+function _stopProgress() {
+  clearInterval(_progressTimer)
+  loadingProgress.value = 100
+  setTimeout(() => { loadingProgress.value = 0 }, 500)
+}
 
 const gallery      = ref([])
 let   galleryId    = 0
@@ -277,11 +301,12 @@ function clearFile() {
 // ── Segmentation ───────────────────────────────────────────────────────────────
 async function handleSubmit() {
   if (!selectedFile.value || loading.value) return
-  loading.value    = true
-  loadingMsg.value = 'Сегментирую...'
-  error.value      = null
-  detections.value = []
+  loading.value     = true
+  loadingMsg.value  = 'Сегментирую...'
+  error.value       = null
+  detections.value  = []
   activeCards.value = null
+  _startProgress()
 
   try {
     const form = new FormData()
@@ -306,6 +331,7 @@ async function handleSubmit() {
   } catch (e) {
     error.value = `Ошибка: ${e.message}`
   } finally {
+    _stopProgress()
     loading.value = false
   }
 }
@@ -338,12 +364,11 @@ async function openCards(det, detIndex) {
     }
 
     const res = await fetch('/api/clip-search', { method: 'POST', body: form })
-    const raw = res.ok
-      ? (await res.json()).results ?? getCardsByClass(det.classId)
+    cardResults.value = res.ok
+      ? ((await res.json()).results ?? getCardsByClass(det.classId))
       : getCardsByClass(det.classId)
-    cardResults.value = enrichCards(raw)
   } catch {
-    cardResults.value = enrichCards(getCardsByClass(det.classId))
+    cardResults.value = getCardsByClass(det.classId)
   } finally {
     cardsLoading.value = false
   }

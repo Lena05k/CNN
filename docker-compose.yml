@@ -8,6 +8,7 @@ services:
       - ./media:/app/media
       - ./yolo8_segment:/app/yolo8_segment
       - ./data:/app/data
+      - ./DjangoProject:/app/DjangoProject
     ports:
       - "8001:8000"
     environment:

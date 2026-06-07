@@ -15,8 +15,10 @@ MASK_ALPHA   = 0.45
 def _load_font(size: int):
     """
     Try to load a TrueType font that supports Cyrillic.
-    Returns (font, cyrillic_ok).
+    Returns (font, cyrillic_ok). Result is cached per size.
     """
+    if size in _font_cache:
+        return _font_cache[size]
     paths = [
         # macOS
         '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
@@ -39,12 +41,17 @@ def _load_font(size: int):
     ]
     for path in paths:
         try:
-            return ImageFont.truetype(path, size), True
+            result = ImageFont.truetype(path, size), True
+            _font_cache[size] = result
+            return result
         except Exception:
             pass
-    return ImageFont.load_default(), False
+    result = ImageFont.load_default(), False
+    _font_cache[size] = result
+    return result
 
 _seg_session = None
+_font_cache: dict = {}
 
 
 def _get_session(model_path: str):
@@ -204,7 +211,7 @@ def render_detections(pil_img: Image.Image, detections: list) -> Image.Image:
 
         # Текст: кириллица или латинский транслит если шрифт не поддерживает
         name  = det['className'] if cyrillic_ok else CLASS_NAMES_LATIN[det['classId']]
-        label = f"{name}  {det['score'] * 100:.0f}%"
+        label = f"{name}  {det['score'] * 100:.1f}%"
 
         # Размер текстового блока
         try:

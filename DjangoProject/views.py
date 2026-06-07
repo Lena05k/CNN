@@ -124,36 +124,15 @@ def segment_image(request):
         dets         = run_segmentation(pil_img, str(settings.SEG_MODEL_PATH), conf_thresh)
         rendered_b64 = pil_to_b64(render_detections(pil_img, dets))
 
-        # CLIP (опционально — если пакет не установлен, возвращаем пустые matches)
-        clip_enabled = False
-        try:
-            from .clip_search import find_similar
-            for det in dets:
-                x1, y1, x2, y2 = (int(v) for v in det['bbox'])
-                crop = pil_img.crop((
-                    max(0, x1), max(0, y1),
-                    min(pil_img.width, x2), min(pil_img.height, y2),
-                ))
-                det['clipMatches'] = (
-                    find_similar(crop, str(settings.MEDIA_ROOT))
-                    if crop.width > 10 and crop.height > 10
-                    else []
-                )
-            clip_enabled = True
-        except Exception:
-            for det in dets:
-                det.setdefault('clipMatches', [])
-
         for det in dets:
             det.pop('mask', None)   # PIL Image не сериализуется в JSON
 
         model_name = Path(str(settings.SEG_MODEL_PATH)).parent.parent.name
 
         return JsonResponse({
-            'rendered':    rendered_b64,
-            'detections':  dets,
-            'clipEnabled': clip_enabled,
-            'model':       model_name,
+            'rendered':   rendered_b64,
+            'detections': dets,
+            'model':      model_name,
         })
 
     except Exception as exc:
@@ -184,27 +163,39 @@ def clip_card_search(request):
 
         # Карточки из frontend/src/constants/birdCards.js дублируем здесь
         ALL_CARDS = [
-            # Альбатрос
+            # Альбатрос (id 1-10)
             dict(id=1,  classId=0, name='Странствующий альбатрос',  desc='Wandering albatross gliding over Southern Ocean, massive 3.5m wingspan, white plumage with black wingtips'),
             dict(id=2,  classId=0, name='Чернобровый альбатрос',    desc='Black-browed albatross with yellow-orange bill and distinctive dark eyebrow stripe, soaring over Atlantic'),
             dict(id=3,  classId=0, name='Тёмноспинный альбатрос',   desc='Black-footed albatross with dark plumage and pale face near Hawaiian islands'),
             dict(id=4,  classId=0, name='Альбатрос Лайсана',        desc='Laysan albatross with white head and dark back nesting on Pacific atoll'),
             dict(id=5,  classId=0, name='Королевский альбатрос',    desc='Northern royal albatross landing on cliff edge with large pink-orange bill, New Zealand'),
             dict(id=6,  classId=0, name='Серый альбатрос',          desc='Grey-headed albatross with grey head and neck, yellow bill with black tip, sub-Antarctic'),
-            # Тупик
-            dict(id=7,  classId=1, name='Атлантический тупик',      desc='Atlantic puffin with colorful triangular orange bill standing on rocky cliff, Iceland'),
-            dict(id=8,  classId=1, name='Тупик с уловом',           desc='Atlantic puffin holding row of small silver sand eels in bright orange beak'),
-            dict(id=9,  classId=1, name='Топорок',                  desc='Tufted puffin with long golden plumes and massive red bill on Pacific rocky coast'),
-            dict(id=10, classId=1, name='Ипатка',                   desc='Horned puffin standing on basalt rock, black and white plumage with orange-yellow bill base'),
-            dict(id=11, classId=1, name='Гагарка',                  desc='Razorbill auk on sea cliff, closest living relative of puffin, thick blunt black bill'),
-            dict(id=12, classId=1, name='Тупик в полёте',           desc='Atlantic puffin in fast flight over grey ocean, wings blurred, orange feet trailing'),
-            # Пингвин
-            dict(id=13, classId=2, name='Императорский пингвин',    desc='Emperor penguin colony on Antarctic sea ice, tallest and heaviest living penguin species'),
-            dict(id=14, classId=2, name='Галстучный пингвин',       desc='Gentoo penguin running on sandy beach, recognized by orange beak and white head stripe'),
-            dict(id=15, classId=2, name='Очковый пингвин',          desc='African penguin on South African rocky shore, black horseshoe marking on white chest'),
-            dict(id=16, classId=2, name='Малый пингвин',            desc='Little blue penguin, smallest penguin species, walking on Australian beach at dusk'),
-            dict(id=17, classId=2, name='Пингвин Адели',            desc='Adelie penguin marching across Antarctic ice, distinctive white eye ring on black cap'),
-            dict(id=18, classId=2, name='Скальный пингвин',         desc='Rockhopper penguin with yellow spiky crest jumping between rocks on sub-Antarctic island'),
+            dict(id=7,  classId=0, name='Тристанский альбатрос',    desc='Tristan albatross nesting on Gough Island, critically endangered seabird with white body and mottled wings'),
+            dict(id=8,  classId=0, name='Альбатрос в бурю',         desc='Wandering albatross banking effortlessly through violent ocean storm, riding wind gusts without flapping wings'),
+            dict(id=9,  classId=0, name='Птенец альбатроса',        desc='Fluffy white albatross chick sitting on grass nest mound, large grey bill, Falkland Islands'),
+            dict(id=10, classId=0, name='Альбатрос у корабля',      desc='Albatross gliding behind fishing trawler, white wings spanning over churning ship wake, Southern Ocean'),
+            # Тупик (id 11-20)
+            dict(id=11, classId=1, name='Атлантический тупик',      desc='Atlantic puffin with colorful triangular orange bill standing on rocky cliff, Iceland'),
+            dict(id=12, classId=1, name='Тупик с уловом',           desc='Atlantic puffin holding row of small silver sand eels in bright orange beak'),
+            dict(id=13, classId=1, name='Топорок',                  desc='Tufted puffin with long golden plumes and massive red bill on Pacific rocky coast'),
+            dict(id=14, classId=1, name='Ипатка',                   desc='Horned puffin standing on basalt rock, black and white plumage with orange-yellow bill base'),
+            dict(id=15, classId=1, name='Гагарка',                  desc='Razorbill auk on sea cliff, closest living relative of puffin, thick blunt black bill'),
+            dict(id=16, classId=1, name='Тупик в полёте',           desc='Atlantic puffin in fast flight over grey ocean, wings blurred, orange feet trailing'),
+            dict(id=17, classId=1, name='Тупик в море зимой',       desc='Atlantic puffin floating on open winter ocean, plain dark plumage without colorful summer bill'),
+            dict(id=18, classId=1, name='Пара тупиков',             desc='Two Atlantic puffins billing and bonding at burrow entrance, affectionate mating behavior, Iceland'),
+            dict(id=19, classId=1, name='Птенец тупика',            desc='Fluffy grey puffling chick peering from burrow entrance, round head, Skomer Island, Wales'),
+            dict(id=20, classId=1, name='Тупик у норки',            desc='Atlantic puffin landing at grass burrow entrance with sand eels in beak, Shetland Islands'),
+            # Пингвин (id 21-30)
+            dict(id=21, classId=2, name='Императорский пингвин',    desc='Emperor penguin colony on Antarctic sea ice, tallest and heaviest living penguin species'),
+            dict(id=22, classId=2, name='Галстучный пингвин',       desc='Gentoo penguin running on sandy beach, recognized by orange beak and white head stripe'),
+            dict(id=23, classId=2, name='Очковый пингвин',          desc='African penguin on South African rocky shore, black horseshoe marking on white chest'),
+            dict(id=24, classId=2, name='Малый пингвин',            desc='Little blue penguin, smallest penguin species, walking on Australian beach at dusk'),
+            dict(id=25, classId=2, name='Пингвин Адели',            desc='Adelie penguin marching across Antarctic ice, distinctive white eye ring on black cap'),
+            dict(id=26, classId=2, name='Скальный пингвин',         desc='Rockhopper penguin with yellow spiky crest jumping between rocks on sub-Antarctic island'),
+            dict(id=27, classId=2, name='Пингвин прыгает',          desc='Gentoo penguin porpoising and leaping from sea onto rocky shore, motion blur, Falkland Islands'),
+            dict(id=28, classId=2, name='Пингвин с птенцом',        desc='Emperor penguin balancing fluffy grey chick on feet, sheltering beneath warm belly, Antarctic ice'),
+            dict(id=29, classId=2, name='Пингвин под водой',        desc='African penguin swimming underwater with wings as flippers, streamlined torpedo body, blue water'),
+            dict(id=30, classId=2, name='Пингвин Магеллана',        desc='Magellanic penguin with two distinctive black chest bands, standing on Patagonian coast, Argentina'),
         ]
 
         cards = [c for c in ALL_CARDS if class_id < 0 or c['classId'] == class_id]
@@ -214,11 +205,10 @@ def clip_card_search(request):
         if crop_file:
             try:
                 import torch
-                from transformers import CLIPModel, CLIPProcessor
+                import numpy as np
+                from .clip_search import _load_clip
                 pil_crop = Image.open(crop_file).convert('RGB')
-                model = CLIPModel.from_pretrained('openai/clip-vit-base-patch32')
-                proc  = CLIPProcessor.from_pretrained('openai/clip-vit-base-patch32')
-                model.eval()
+                model, proc = _load_clip()
 
                 # Image embedding
                 img_inputs = proc(images=pil_crop, return_tensors='pt')
@@ -227,8 +217,7 @@ def clip_card_search(request):
                     img_feat = img_feat / img_feat.norm(dim=-1, keepdim=True)
                 img_emb = img_feat[0].cpu().numpy()
 
-                # Text embeddings for each card
-                import numpy as np
+                # Text embeddings for each card description
                 texts = [c['desc'] for c in cards]
                 txt_inputs = proc(text=texts, return_tensors='pt', padding=True, truncation=True)
                 with torch.no_grad():
@@ -284,3 +273,23 @@ def predictImageData(modelName, filePath):
     sess = _get_session()
     outputOFModel = np.argmax(sess.run(None, {'input': np.asarray([img]).astype(np.float32)}))
     return imageClassList[str(outputOFModel)]
+
+
+# ── Предзагрузка ONNX-моделей при старте ──────────────────────────────────────
+import threading as _threading
+
+def _preload_models():
+    """Load ONNX sessions in background at startup so first requests are fast."""
+    try:
+        _get_session()
+        print('[WARMUP] classification model ready.')
+    except Exception as e:
+        print(f'[WARMUP] classification model failed: {e}')
+    try:
+        from .segmentation import _get_session as _seg_get
+        _seg_get(str(settings.SEG_MODEL_PATH))
+        print('[WARMUP] segmentation model ready.')
+    except Exception as e:
+        print(f'[WARMUP] segmentation model failed: {e}')
+
+_threading.Thread(target=_preload_models, daemon=True).start()

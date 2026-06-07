@@ -44,6 +44,12 @@ db.sqlite3
 /.idea
 media/images/
 
+# Datasets and large files
+data/
+mlruns/
+*.pt
+*.onnx
+
 # AI assistant config
 CLAUDE.md
 CLAUDE_RU.md
